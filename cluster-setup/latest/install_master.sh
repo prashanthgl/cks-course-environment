@@ -423,8 +423,6 @@ cilium install \
   --set hubble.relay.enabled=true \
   --set hubble.ui.enabled=true
 
-sleep 10
-
 ### check for status
 echo "Check for cilium status"
 # cilium status --wait
@@ -434,11 +432,36 @@ echo "Check for cilium status"
 # kubectl run testbox --image=curlimages/curl:8.7.1 --restart=Never -it -- \
 #   sh -c 'ip addr; nslookup kubernetes.default.svc.cluster.local || true; sleep 5'   # If it starts and resolves DNS, you’re basically done.
 
-## Install additional utilities
-echo "Installing additional utilities"
-bash <(curl -s https://raw.githubusercontent.com/prashanthgl/cks-course-environment/refs/heads/use-cilium/cluster-setup/latest/useful_utilities.sh)
-
 ### finished
 echo
 echo "### COMMAND TO ADD A WORKER NODE ###"
-kubeadm token create --print-join-command --ttl 0
+# Capture the join command
+JOIN_COMMAND=$(kubeadm token create --print-join-command --ttl 0)
+echo "Join command: $JOIN_COMMAND"
+
+# Save join command to file (optional, for local reference)
+echo "$JOIN_COMMAND" > /root/kubeadm-join-command.sh
+chmod +x /root/kubeadm-join-command.sh
+
+# Get instance details
+PROJECT_ID=$(curl -s "http://metadata.google.internal/computeMetadata/v1/project/project-id" -H "Metadata-Flavor: Google")
+ZONE=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/zone" -H "Metadata-Flavor: Google" | cut -d'/' -f4)
+INSTANCE_NAME=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/name" -H "Metadata-Flavor: Google")
+
+# Prepare kubeconfig
+mkdir -p /root/.kube
+cp /etc/kubernetes/admin.conf /root/.kube/config
+chown $(id -u):$(id -g) /root/.kube/config
+
+# Encode kubeconfig and join command in base64
+KUBECONFIG_B64=$(base64 -w 0 /root/.kube/config)
+JOIN_COMMAND_B64=$(echo "$JOIN_COMMAND" | base64 -w 0)
+
+# Set both kubeconfig and join command as metadata
+gcloud compute instances add-metadata $INSTANCE_NAME \
+  --zone=$ZONE \
+  --metadata=kubeconfig="$KUBECONFIG_B64",join-command="$JOIN_COMMAND_B64",master-ready="true"
+
+## Install additional utilities
+echo "Installing additional utilities"
+bash <(curl -s https://raw.githubusercontent.com/prashanthgl/cks-course-environment/refs/heads/use-cilium/cluster-setup/latest/useful_utilities.sh)
