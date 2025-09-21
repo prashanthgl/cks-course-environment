@@ -19,3 +19,4 @@ gcloud compute instances create cks-worker --zone=europe-west4-a \
   sudo bash /tmp/worker_script.sh'
 
   
+sudo journalctl -u google-startup-scripts.service -n 50
