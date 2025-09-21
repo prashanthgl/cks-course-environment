@@ -409,6 +409,7 @@ rm cilium-linux-amd64.tar.gz
 
 ### Now install cilium CNI and replace kube-proxy
 cilium install \
+  --namespace cilium-system
   --set kubeProxyReplacement=true \
   --set bpf.masquerade=true \
   --set hostServices.enabled=true \
