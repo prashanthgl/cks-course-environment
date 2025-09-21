@@ -378,7 +378,7 @@ EOF
 ### disable appamor
 aa-teardown > /dev/null 2>&1 || true
 service apparmor stop > /dev/null 2>&1 || true
-systemctl disable appamor > /dev/null 2>&1 || true
+systemctl disable apparmor > /dev/null 2>&1 || true
 apt-get remove -y apparmor > /dev/null 2>&1 || true
 
 
