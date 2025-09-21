@@ -453,15 +453,6 @@ mkdir -p /root/.kube
 cp /etc/kubernetes/admin.conf /root/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
 
-# Encode kubeconfig and join command in base64
-KUBECONFIG_B64=$(base64 -w 0 /root/.kube/config)
-JOIN_COMMAND_B64=$(echo "$JOIN_COMMAND" | base64 -w 0)
-
-# Set both kubeconfig and join command as metadata
-gcloud compute instances add-metadata $INSTANCE_NAME \
-  --zone=$ZONE \
-  --metadata=kubeconfig="$KUBECONFIG_B64",join-command="$JOIN_COMMAND_B64",master-ready="true"
-
 ## Install additional utilities
 echo "Installing additional utilities"
 bash <(curl -s https://raw.githubusercontent.com/prashanthgl/cks-course-environment/refs/heads/use-cilium/cluster-setup/latest/useful_utilities.sh)
