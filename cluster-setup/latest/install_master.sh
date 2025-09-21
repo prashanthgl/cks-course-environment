@@ -427,12 +427,16 @@ sleep 10
 
 ### check for status
 echo "Check for cilium status"
-cilium status --wait
-kubectl -n kube-system get pods -l k8s-app=cilium
+# cilium status --wait
+# kubectl -n kube-system get pods -l k8s-app=cilium
 
 ### Optional quick test
-kubectl run testbox --image=curlimages/curl:8.7.1 --restart=Never -it -- \
-  sh -c 'ip addr; nslookup kubernetes.default.svc.cluster.local || true; sleep 5'   # If it starts and resolves DNS, you’re basically done.
+# kubectl run testbox --image=curlimages/curl:8.7.1 --restart=Never -it -- \
+#   sh -c 'ip addr; nslookup kubernetes.default.svc.cluster.local || true; sleep 5'   # If it starts and resolves DNS, you’re basically done.
+
+## Install additional utilities
+echo "Installing additional utilities"
+bash <(curl -s https://raw.githubusercontent.com/prashanthgl/cks-course-environment/refs/heads/use-cilium/cluster-setup/latest/useful_utilities.sh)
 
 ### finished
 echo
