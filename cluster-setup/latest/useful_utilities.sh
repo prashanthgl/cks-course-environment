@@ -1,8 +1,7 @@
 #!/bin/bash
 
-sudo apt install -y git
-sudo apt-get install -y python3 python3-pip
-
+sudo apt install -y git python3 python3-pip
+sudo apt-get install -y fzf
 # Install kube-bench (CIS Kubernetes benchmark)
 KUBE_BENCH_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/kube-bench/releases/latest | jq -r '.tag_name')
 curl -sL "https://github.com/aquasecurity/kube-bench/releases/download/${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION#v}_linux_amd64.tar.gz" | sudo tar -xzf - -C /usr/local/bin kube-bench
