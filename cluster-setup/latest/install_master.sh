@@ -398,13 +398,44 @@ sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
 
 
 ### CNI
-kubectl apply -f https://raw.githubusercontent.com/killer-sh/cks-course-environment/master/cluster-setup/weave.yaml
-echo "Waiting for weave-net to be ready..."
+echo "Using Cilium CNI"
+### Install cilum cli
+CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+curl -L --fail -O https://github.com/cilium/cilium-cli/releases/download/${CLI_VERSION}/cilium-linux-amd64.tar.gz
+tar xzf cilium-linux-amd64.tar.gz -C /usr/local/bin cilium
+rm cilium-linux-amd64.tar.gz
+
+### Now install cilium CNI and replace kube-proxy
+cilium install \
+  --set kubeProxyReplacement=strict \
+  --set bpf.masquerade=true \
+  --set hostServices.enabled=true \
+  --set hostPort.enabled=true \
+  --set ipam.mode=kubernetes
+
 sleep 10
-kubectl -n kube-system wait --for=condition=Ready pod -l name=weave-net --timeout=3600s
-sleep 5
-kubectl -n kube-system delete pods -l k8s-app=kube-dns --force --grace-period 0
-echo "Waiting for weave-net to be ready... done"
+
+### check for status
+echo "Check for cilium status"
+cilium status --wait
+kubectl -n kube-system get pods -l k8s-app=cilium
+
+
+### Optional quick test
+kubectl run testbox --image=curlimages/curl:8.7.1 --restart=Never -it -- \
+  sh -c 'ip addr; nslookup kubernetes.default.svc.cluster.local || true; sleep 5'   # If it starts and resolves DNS, you’re basically done.
+
+
+
+
+# legacy weave net installation
+# kubectl apply -f https://raw.githubusercontent.com/killer-sh/cks-course-environment/master/cluster-setup/weave.yaml
+# echo "Waiting for weave-net to be ready..."
+# sleep 10
+# kubectl -n kube-system wait --for=condition=Ready pod -l name=weave-net --timeout=3600s
+# sleep 5
+# kubectl -n kube-system delete pods -l k8s-app=kube-dns --force --grace-period 0
+# echo "Waiting for weave-net to be ready... done"
 
 
 ### finished
