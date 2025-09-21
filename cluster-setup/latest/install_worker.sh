@@ -394,52 +394,6 @@ kubeadm reset -f
 systemctl daemon-reload
 service kubelet start
 
-# Get master instance name and zone
-MASTER_INSTANCE="cks-master"
-ZONE=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/zone" -H "Metadata-Flavor: Google" | cut -d'/' -f4)
-
-# Wait for master to be ready
-echo "Waiting for cks-master node to be ready..."
-while true; do
-  MASTER_READY=$(gcloud compute instances describe $MASTER_INSTANCE --zone=$ZONE --format="value(metadata.items[key=master-ready].value)" 2>/dev/null)
-  if [ "$MASTER_READY" = "true" ]; then
-    echo "Master node is ready!"
-    break
-  fi
-  echo "Master not ready yet, waiting 10 seconds..."
-  sleep 10
-done
-
-# Get kubeconfig from master metadata
-echo "Retrieving kubeconfig from master node..."
-KUBECONFIG_B64=$(gcloud compute instances describe $MASTER_INSTANCE --zone=$ZONE --format="value(metadata.items[key=kubeconfig].value)")
-
-# Get join command from master metadata
-echo "Retrieving join command from master node..."
-JOIN_COMMAND_B64=$(gcloud compute instances describe $MASTER_INSTANCE --zone=$ZONE --format="value(metadata.items[key=join-command].value)")
-
-# Decode and save kubeconfig
-mkdir -p /root/.kube
-echo "$KUBECONFIG_B64" | base64 -d > /root/.kube/config
-chown $(id -u):$(id -g) /root/.kube/config
-echo "Kubeconfig successfully copied to /root/.kube/config"
-
-# Decode and save join command
-echo "$JOIN_COMMAND_B64" | base64 -d > /root/kubeadm-join-command.sh
-chmod +x /root/kubeadm-join-command.sh
-echo "Join command saved to /root/kubeadm-join-command.sh"
-
-# Execute the join command
-echo "Executing kubeadm join..."
-JOIN_COMMAND=$(echo "$JOIN_COMMAND_B64" | base64 -d)
-eval "$JOIN_COMMAND"
-
-if [ $? -eq 0 ]; then
-    echo "Successfully joined the cluster!"
-else
-    echo "Failed to join the cluster. Check the logs."
-fi
-
 ## Install additional utilities
 echo "Installing additional utilities"
 bash <(curl -s https://raw.githubusercontent.com/prashanthgl/cks-course-environment/refs/heads/use-cilium/cluster-setup/latest/useful_utilities.sh)
