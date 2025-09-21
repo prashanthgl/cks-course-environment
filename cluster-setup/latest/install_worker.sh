@@ -394,6 +394,9 @@ kubeadm reset -f
 systemctl daemon-reload
 service kubelet start
 
+## Install additional utilities
+echo "Installing additional utilities"
+bash <(curl -s https://raw.githubusercontent.com/prashanthgl/cks-course-environment/refs/heads/use-cilium/cluster-setup/latest/useful_utilities.sh)
 
 echo
 echo "EXECUTE ON MASTER: kubeadm token create --print-join-command --ttl 0"
