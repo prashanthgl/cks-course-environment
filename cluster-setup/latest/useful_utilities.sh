@@ -1,5 +1,7 @@
 #!/bin/bash
 
+curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
 sudo apt install -y git python3 python3-pip
 sudo apt-get install -y fzf
 # Install kube-bench (CIS Kubernetes benchmark)
