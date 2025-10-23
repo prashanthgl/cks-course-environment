@@ -23,5 +23,5 @@ sudo journalctl -u google-startup-scripts.service -n 50
 
 
 gcloud compute instances delete cks-master cks-worker \
-    --zone =europe-west4-a \
+    --zone europe-west4-a \
     --quiet
