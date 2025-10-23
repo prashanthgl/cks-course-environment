@@ -396,4 +396,4 @@ service kubelet start
 
 ## Install additional utilities
 echo "Installing additional utilities"
-bash <(curl -s https://raw.githubusercontent.com/prashanthgl/cks-course-environment/refs/heads/use-cilium/cluster-setup/latest/useful_utilities.sh)
+bash <(curl -s https://raw.githubusercontent.com/prashanthgl/cks-course-environment/refs/heads/use-cilium/cluster-setup/useful_utilities.sh)
