@@ -776,6 +776,18 @@ kubectl exec -n kube-system ds/cilium -- \
 ## 21. cilium-dbg — Misc
 
 ```bash
+# ALL identities in the CLUSTER (NOT just this node)
+# In Cilium ≥1.19, this moved from "cilium identity list" which no longer exists
+cilium-dbg identity list
+
+# Details for a specific identity by numeric ID
+# Shows labels and status — use when cilium monitor shows an unknown identity number
+cilium-dbg identity get 12345
+
+# Alternative: query identities via K8s API (CRD-backed identities)
+# Same result as cilium-dbg identity list but via kubectl instead of agent socket
+kubectl get ciliumidentity
+
 # List all cluster nodes known to this agent
 # Cross-check with kubectl get nodes to ensure no missing nodes
 cilium-dbg node list
@@ -813,6 +825,7 @@ cilium-dbg shell
 | `bpf tunnel list` | `cilium` | `cilium-dbg` | inside pod |
 | `monitor` | `cilium` | `cilium-dbg` | inside pod |
 | `policy trace` | `cilium` | `cilium-dbg` | inside pod |
+| `identity list/get` | `cilium` (‼️ but not exposed in dbg) | `cilium-dbg` | inside pod |
 | `debuginfo` | `cilium` | `cilium-dbg` | inside pod |
 | `metrics list` | — | `cilium-dbg` | inside pod |
 | `statedb` | — | `cilium-dbg` | inside pod (1.14+) |
@@ -827,9 +840,26 @@ cilium-dbg shell
 
 ## 23. Exam Traps & Confusers
 
-### 1. `cilium endpoint list` vs `cilium identity list`
+### 0. `cilium identity` command does NOT exist in Cilium ≥1.19 (MAJOR TRAP)
+```bash
+# WRONG in Cilium 1.19+ — command not found
+cilium identity list
+cilium identity get 12345
+
+# CORRECT in Cilium 1.19+
+cilium-dbg identity list
+cilium-dbg identity get 12345
+
+# Also correct as alternative (queries K8s API, not agent socket)
+kubectl get ciliumidentity
+```
+**What happened:** The standalone `cilium` CLI (installable separately) was always separate from the agent-side debug CLI. In 1.19+, all agent-side inspection commands (including `identity`) moved exclusively to `cilium-dbg`. The standalone CLI now focuses on cluster-level operations (install, status, hubble enable, connectivity test) that talk to the K8s API.
+
+**On the exam:** If you try `cilium identity` and get "no such command", this is NOT a bug — **use `cilium-dbg identity` instead**. The exam explicitly tests this distinction. You might see both in different contexts or even see a question asking "which command queries all cluster identities" where the answer is `cilium-dbg identity list` (not `cilium identity list`).
+
+### 1. `cilium endpoint list` vs `cilium-dbg identity list`
 - `endpoint list` = pods on **this node only**
-- `identity list` = all identities in the **cluster**
+- `identity list` = all identities in the **cluster** (via agent socket)
 - Cross-node policy debugging requires checking ipcache on **both** nodes.
 
 ### 2. `--related-to` requires endpoint ID, NOT pod name
@@ -1001,3 +1031,5 @@ hubble observe --follow --http-path /api --verdict DROPPED
 ```
 
 ---
+
+*Reference version: Cilium 1.13–1.15 | CCA Exam Prep*
