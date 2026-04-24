@@ -2,7 +2,7 @@
 
 # Source: https://kubernetes.io/docs/reference/setup-tools/kubeadm
 
-KUBE_VERSION=1.34.1
+KUBE_VERSION=1.35.0
 
 set -e
 
@@ -95,13 +95,13 @@ EOF
 apt-get update
 apt-get install -y apt-transport-https ca-certificates
 mkdir -p /etc/apt/keyrings
+rm /etc/apt/keyrings/kubernetes-1-35-apt-keyring.gpg || true
 rm /etc/apt/keyrings/kubernetes-1-34-apt-keyring.gpg || true
-rm /etc/apt/keyrings/kubernetes-1-33-apt-keyring.gpg || true
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.35/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-1-35-apt-keyring.gpg
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-1-34-apt-keyring.gpg
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-1-33-apt-keyring.gpg
 echo > /etc/apt/sources.list.d/kubernetes.list
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-1-35-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.35/deb/ /" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-1-34-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-1-33-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 apt-get --allow-unauthenticated update
 apt-get --allow-unauthenticated install -y containerd kubelet=${KUBE_VERSION}-1.1 kubeadm=${KUBE_VERSION}-1.1 kubectl=${KUBE_VERSION}-1.1 kubernetes-cni
 
@@ -138,6 +138,28 @@ net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 sudo sysctl --system
 sudo mkdir -p /etc/containerd
+
+
+### containerd registry hosts.toml
+sudo mkdir -p /etc/containerd/certs.d/docker.io
+cat > /etc/containerd/certs.d/docker.io/hosts.toml <<EOF
+server = "https://docker.io"
+
+[host."https://mirror.gcr.io"]
+  capabilities = ["pull", "resolve"]
+
+[host."https://registry-1.docker.io"]
+  capabilities = ["pull", "resolve"]
+EOF
+
+sudo mkdir -p "/etc/containerd/certs.d/registry.killer.sh:5000"
+cat > "/etc/containerd/certs.d/registry.killer.sh:5000/hosts.toml" <<EOF
+server = "https://registry.killer.sh:5000"
+
+[host."https://registry.killer.sh:5000"]
+  capabilities = ["pull", "resolve"]
+  skip_verify = true
+EOF
 
 
 ### containerd config
@@ -197,7 +219,7 @@ version = 2
     max_container_log_line_size = 16384
     netns_mounts_under_state_dir = false
     restrict_oom_score_adj = false
-    sandbox_image = "k8s.gcr.io/pause:3.10.1"
+    sandbox_image = "k8s.gcr.io/pause:3.5"
     selinux_category_range = 1024
     stats_collect_period = 10
     stream_idle_timeout = "4h0m0s"
@@ -270,19 +292,11 @@ version = 2
       key_model = "node"
 
     [plugins."io.containerd.grpc.v1.cri".registry]
-      config_path = ""
+      config_path = "/etc/containerd/certs.d"
 
       [plugins."io.containerd.grpc.v1.cri".registry.auths]
 
-      [plugins."io.containerd.grpc.v1.cri".registry.configs]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.killer.sh:5000".tls]
-          insecure_skip_verify = true
-
       [plugins."io.containerd.grpc.v1.cri".registry.headers]
-
-      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-          endpoint = ["https://mirror.gcr.io", "https://registry-1.docker.io"]
 
 
     [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
@@ -378,7 +392,7 @@ EOF
 ### disable appamor
 aa-teardown > /dev/null 2>&1 || true
 service apparmor stop > /dev/null 2>&1 || true
-systemctl disable apparmor > /dev/null 2>&1 || true
+systemctl disable appamor > /dev/null 2>&1 || true
 apt-get remove -y apparmor > /dev/null 2>&1 || true
 
 
